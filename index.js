@@ -8,8 +8,12 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 })
 
-function buildName() {
-  return "Workout"
+function buildName(pageCount) {
+  var today  = new Date();
+  let dateString = today.toLocaleDateString("en-US")
+  dateString = dateString.substring(0, dateString.length - 5)
+
+  return `Workout ${pageCount} - ${dateString}`
 }
 
 async function main() {
@@ -40,6 +44,28 @@ async function main() {
       cursor = next_cursor
     }
 
+    // get parent page contents (for calculating workout number)
+    let pageCount = 0
+    cursor = undefined
+    while (true) {
+      const { results, next_cursor } = await notion.blocks.children.list({
+        block_id: process.env.PARENT_PAGE_ID,
+        start_cursor: cursor,
+        sorts: [
+          {
+            property: 'Order',
+            direction: 'descending',
+          },
+        ]
+      })
+
+      pageCount += results.length
+      if (!next_cursor) {
+        break
+      }
+      cursor = next_cursor
+    }
+
     // create the db
     const dbCreateResult = await notion.databases.create({
       "parent": {
@@ -50,12 +76,12 @@ async function main() {
         {
             "type": "text",
             "text": {
-                "content": buildName(),
+                "content": buildName(pageCount),
                 "link": null
             }
         }
       ],
-      "properties": dbSchema.properties
+      properties: dbSchema.properties,
     })
 
     // ffs we have to map the selects to the ones on the new page
@@ -77,14 +103,11 @@ async function main() {
 
       console.log(`adding row ${row}`)
       row++
-      
-      const result = await notion.pages.create(createPayload)
-      // console.log(`result is: ${JSON.stringify(result)}`)
+
+      await notion.pages.create(createPayload)
     }
 
     console.log("Done!")
 }
 
 main();
-
-// Difficulty.id
