@@ -25,6 +25,12 @@ async function main() {
       const { results, next_cursor } = await notion.databases.query({
         database_id: process.env.BASE_DB_ID,
         start_cursor: cursor,
+        sorts: [
+          {
+            property: 'Order',
+            direction: 'descending',
+          },
+        ]
       })
 
       contentPages.push(...results)
@@ -55,6 +61,8 @@ async function main() {
     // ffs we have to map the selects to the ones on the new page
     const selectOptions = dbCreateResult.properties["Difficulty"].select.options
 
+    let row = 1
+
     // add the contents
     for (const page of contentPages) {
       const createPayload = Object.assign(page, {
@@ -67,6 +75,9 @@ async function main() {
         createPayload.properties.Difficulty.select = selectOptions.find((s) => s.name === page.properties["Difficulty"].select.name)
       }
 
+      console.log(`adding row ${row}`)
+      row++
+      
       const result = await notion.pages.create(createPayload)
       // console.log(`result is: ${JSON.stringify(result)}`)
     }

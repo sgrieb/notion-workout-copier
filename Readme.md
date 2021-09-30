@@ -13,4 +13,5 @@ Overview
 - no docs on js client
 - weird inconsistent datatypes
 - super abstracted types make it confusing af
-- the selector???
+- had to remap select options for difficulty column
+- had to create order column so we can maintain row order :facepalm
