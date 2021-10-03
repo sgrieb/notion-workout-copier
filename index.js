@@ -101,6 +101,9 @@ async function main() {
         createPayload.properties.Difficulty.select = selectOptions.find((s) => s.name === page.properties["Difficulty"].select.name)
       }
 
+      // set checkboxes to unselected
+      page.properties["Done?"].checkbox =  false
+
       console.log(`adding row ${row}`)
       row++
 
