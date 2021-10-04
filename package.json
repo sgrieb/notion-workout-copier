@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "local": "node -e \"console.log(require('./index').handler(require('./event.json')));\""
   },
   "repository": {
     "type": "git",

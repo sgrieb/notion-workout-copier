@@ -15,3 +15,6 @@ Overview
 - super abstracted types make it confusing af
 - had to remap select options for difficulty column
 - had to create order column so we can maintain row order :facepalm
+
+# Deploying
+`npm install -g node-lambda`

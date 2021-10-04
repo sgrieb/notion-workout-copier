@@ -13,7 +13,7 @@ function buildName(pageCount) {
   let dateString = today.toLocaleDateString("en-US")
   dateString = dateString.substring(0, dateString.length - 5)
 
-  return `Workout ${pageCount} - ${dateString}`
+  return `Week ${pageCount} - ${dateString}`
 }
 
 async function main() {
@@ -113,4 +113,6 @@ async function main() {
     console.log("Done!")
 }
 
-main();
+exports.handler = async (event, context) => {
+  await main();
+};
