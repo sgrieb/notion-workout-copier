@@ -17,17 +17,28 @@ function buildName(pageCount) {
 }
 
 async function main() {
+
+    // fetch the most recently created as a base
+    // this will only work up  to 100, so archive at 100
+    // these are naturally in the right order so just grab the last one
+    const childBlocks = await notion.blocks.children.list({
+      block_id: process.env.PARENT_PAGE_ID,
+    })
+
+    // get our base db
+    let baseDb = childBlocks.results[childBlocks.results.length - 1]
+
     // get base schema
     const dbSchema = await notion.databases.retrieve({
-      database_id: process.env.BASE_DB_ID,
+      database_id: baseDb.id,
     })
 
     // get contents
-    const contentPages = []
+    let contentPages = []
     let cursor = undefined
     while (true) {
       const { results, next_cursor } = await notion.databases.query({
-        database_id: process.env.BASE_DB_ID,
+        database_id: baseDb.id,
         start_cursor: cursor,
         sorts: [
           {
@@ -44,27 +55,31 @@ async function main() {
       cursor = next_cursor
     }
 
-    // get parent page contents (for calculating workout number)
-    let pageCount = 0
-    cursor = undefined
-    while (true) {
-      const { results, next_cursor } = await notion.blocks.children.list({
-        block_id: process.env.PARENT_PAGE_ID,
-        start_cursor: cursor,
-        sorts: [
-          {
-            property: 'Order',
-            direction: 'descending',
-          },
-        ]
-      })
+    // remove first item which is a blank row for some reason?
+    contentPages.splice(contentPages.length - 1, 1)
 
-      pageCount += results.length
-      if (!next_cursor) {
-        break
-      }
-      cursor = next_cursor
-    }
+    // USE THIS LATER FOR OVER 100 pages
+    // get parent page contents (for calculating workout number)
+    let pageCount = childBlocks.results.length
+    // cursor = undefined
+    // while (true) {
+    //   const { results, next_cursor } = await notion.blocks.children.list({
+    //     block_id: baseDb.id,
+    //     start_cursor: cursor,
+    //     sorts: [
+    //       {
+    //         property: 'Order',
+    //         direction: 'descending',
+    //       },
+    //     ]
+    //   })
+
+    //   pageCount += results.length
+    //   if (!next_cursor) {
+    //     break
+    //   }
+    //   cursor = next_cursor
+    // }
 
     // create the db
     const dbCreateResult = await notion.databases.create({
