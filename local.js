@@ -1,2 +1,1 @@
-
-require('./index').handler(require('./event.json'))
+require('./index').handler(require('./event.json'));

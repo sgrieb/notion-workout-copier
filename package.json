@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "local": "node -e \"console.log(require('./index').handler(require('./event.json')));\"",
-    "package": "node-lambda package --packageDirectory=build"
+    "package": "node-lambda package --packageDirectory=build",
+    "lint": "eslint **/*.js",
+    "lint:fix": "eslint --fix **/*.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +22,10 @@
   "dependencies": {
     "@notionhq/client": "^0.3.2",
     "dotenv": "^10.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.8.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.4"
   }
 }

@@ -1,133 +1,177 @@
+require('dotenv').config();
 
-require('dotenv').config()
-
-const { Client } = require("@notionhq/client")
+const { Client } = require('@notionhq/client');
 
 // Initializing a client
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
-})
+});
 
-function buildName(pageCount) {
-  var today  = new Date();
-  let dateString = today.toLocaleDateString("en-US")
-  dateString = dateString.substring(0, dateString.length - 5)
+function buildName(config, pageCount) {
+  const today = new Date();
+  let dateString = today.toLocaleDateString('en-US');
+  dateString = dateString.substring(0, dateString.length - 5);
 
-  return `Week ${pageCount} - ${dateString}`
+  let { title } = config;
+
+  // apply string replacements
+  title = title.replace('[PAGE_COUNT]', pageCount);
+  title = title.replace('[DATE]', dateString);
+
+  return title;
 }
 
-async function main() {
+function getBaseDb(childBlocks) {
+  let base = null;
 
-    // fetch the most recently created as a base
-    // this will only work up  to 100, so archive at 100
-    // these are naturally in the right order so just grab the last one
-    const childBlocks = await notion.blocks.children.list({
-      block_id: process.env.PARENT_PAGE_ID,
-    })
+  // sort based on creation date
+  childBlocks.results.sort((a, b) => new Date(b.created_time) - new Date(a.created_time));
 
-    // get our base db
-    let baseDb = childBlocks.results[childBlocks.results.length - 1]
-
-    // get base schema
-    const dbSchema = await notion.databases.retrieve({
-      database_id: baseDb.id,
-    })
-
-    // get contents
-    let contentPages = []
-    let cursor = undefined
-    while (true) {
-      const { results, next_cursor } = await notion.databases.query({
-        database_id: baseDb.id,
-        start_cursor: cursor,
-        sorts: [
-          {
-            property: 'Order',
-            direction: 'descending',
-          },
-        ]
-      })
-
-      contentPages.push(...results)
-      if (!next_cursor) {
-        break
-      }
-      cursor = next_cursor
+  childBlocks.results.forEach((item) => {
+    if (base) {
+      return;
     }
 
-    // remove first item which is a blank row for some reason?
-    // contentPages.splice(contentPages.length - 1, 1)
+    if (item.type === 'child_database') {
+      base = item;
+    }
+  });
 
-    // USE THIS LATER FOR OVER 100 pages
-    // get parent page contents (for calculating workout number)
-    let pageCount = childBlocks.results.length
-    // cursor = undefined
-    // while (true) {
-    //   const { results, next_cursor } = await notion.blocks.children.list({
-    //     block_id: baseDb.id,
-    //     start_cursor: cursor,
-    //     sorts: [
-    //       {
-    //         property: 'Order',
-    //         direction: 'descending',
-    //       },
-    //     ]
-    //   })
+  // get the most recently created db
+  return base;
+}
 
-    //   pageCount += results.length
-    //   if (!next_cursor) {
-    //     break
-    //   }
-    //   cursor = next_cursor
-    // }
+async function buildContents(config, dbCreateResult, contentPages) {
+  // we have to map the selects to the ones on the new page
+  const selectOptions = dbCreateResult.properties.Difficulty.select.options;
+  const options = {}
+  if(config.selectColumns) {
+    config.selectColumns.forEach((column) => {
+      options[column] = dbCreateResult.properties[column].select.options;
+    })
+  }
 
-    // create the db
-    const dbCreateResult = await notion.databases.create({
-      "parent": {
-          "type": "page_id",
-          "page_id": process.env.PARENT_PAGE_ID
+  let row = 1;
+
+  // add the contents
+  for (const page of contentPages) {
+    const createPayload = Object.assign(page, {
+      parent: {
+        database_id: dbCreateResult.id,
       },
-      "title": [
-        {
-            "type": "text",
-            "text": {
-                "content": buildName(pageCount),
-                "link": null
-            }
+    });
+
+    if(config.selectColumns) {
+      config.selectColumns.forEach((column) => {
+        if (page.properties[column].select) {
+          createPayload.properties[column].select = selectOptions.find(
+            (s) => s.name === page.properties[column].select.name,
+          );
         }
-      ],
-      properties: dbSchema.properties,
-    })
-
-    // ffs we have to map the selects to the ones on the new page
-    const selectOptions = dbCreateResult.properties["Difficulty"].select.options
-
-    let row = 1
-
-    // add the contents
-    for (const page of contentPages) {
-      const createPayload = Object.assign(page, {
-        parent: {
-          database_id: dbCreateResult.id,
-        },
-      });
-
-      if(page.properties["Difficulty"].select) {
-        createPayload.properties.Difficulty.select = selectOptions.find((s) => s.name === page.properties["Difficulty"].select.name)
-      }
-
-      // set checkboxes to unselected
-      page.properties["Done?"].checkbox =  false
-
-      console.log(`adding row ${row}`)
-      row++
-
-      await notion.pages.create(createPayload)
+      })
     }
 
-    console.log("Done!")
+    // checkbox handling
+    if(config.uncheckColumns) {
+      config.uncheckColumns.forEach((column) => {
+        page.properties[column].checkbox = false;
+      })
+    }
+
+    console.log(`adding row ${row}`);
+    row++;
+
+    await notion.pages.create(createPayload)
+  }
+}
+
+async function runConfig(config) {
+  // fetch the most recently created as a base
+  // this will only work up  to 100
+  const childBlocks = await notion.blocks.children.list({
+    block_id: config.parent,
+  });
+
+  // get our base db
+  const baseDb = getBaseDb(childBlocks);
+
+  if (!baseDb) {
+    console.log('Unable to get baseDB.  Exiting.');
+    return;
+  }
+
+  // get base schema
+  const dbSchema = await notion.databases.retrieve({
+    database_id: baseDb.id,
+  });
+
+  // get contents
+  const contentPages = [];
+  let cursor;
+  while (true) {
+    const query = {
+      database_id: baseDb.id,
+      start_cursor: cursor,
+    };
+
+    // apply sort if necessary
+    if (config.sortBy) {
+      query.sorts = [
+        {
+          property: config.sortBy,
+          direction: 'descending',
+        },
+      ];
+    }
+
+    const { results, next_cursor } = await notion.databases.query(query);
+    contentPages.push(...results);
+    if (!next_cursor) {
+      break;
+    }
+    cursor = next_cursor;
+  }
+
+  // remove first item which is a blank row for some reason?
+  // contentPages.splice(contentPages.length - 1, 1)
+
+  // get parent page contents (for calculating workout number)
+  const pageCount = childBlocks.results.length;
+
+  // create the db
+  const dbCreateResult = await notion.databases.create({
+    parent: {
+      type: 'page_id',
+      page_id: config.parent,
+    },
+    title: [
+      {
+        type: 'text',
+        text: {
+          content: buildName(config, pageCount),
+          link: null,
+        },
+      },
+    ],
+    properties: dbSchema.properties,
+  });
+
+  await buildContents(config, dbCreateResult, contentPages);
+}
+
+async function main(event) {
+  if (!event || !event.config) {
+    console.log('Invalid / No config provided.  Exiting.');
+    return;
+  }
+
+  for (const config of event.config) {
+    await runConfig(config);
+  }
+
+  console.log('Done!');
 }
 
 exports.handler = async (event, context) => {
-  await main();
+  await main(event, context);
 };

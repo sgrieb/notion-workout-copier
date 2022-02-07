@@ -1,0 +1,15 @@
+{
+  "config": [
+    {
+      "parent": "xxxxxxxxxxxxxxx",
+      "sortBy": "Order",
+      "title": "Week [PAGE_COUNT] - [DATE]",
+      "selectColumns": [
+        "Difficulty"
+      ],
+      "uncheckColumns": [
+        "Done?"
+      ]
+    }
+  ]
+}
