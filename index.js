@@ -56,7 +56,7 @@ async function main() {
     }
 
     // remove first item which is a blank row for some reason?
-    contentPages.splice(contentPages.length - 1, 1)
+    // contentPages.splice(contentPages.length - 1, 1)
 
     // USE THIS LATER FOR OVER 100 pages
     // get parent page contents (for calculating workout number)

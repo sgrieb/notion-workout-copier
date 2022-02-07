@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "local": "node -e \"console.log(require('./index').handler(require('./event.json')));\""
+    "local": "node -e \"console.log(require('./index').handler(require('./event.json')));\"",
+    "package": "node-lambda package --packageDirectory=build"
   },
   "repository": {
     "type": "git",
