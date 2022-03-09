@@ -11,9 +11,14 @@ const databases = {
     create: jest.fn(),
 }
 
+const pages = {
+    create: jest.fn(),
+}
+
 const clientMethods = {
     blocks,
     databases,
+    pages,
 }
 
 const Client = jest.fn().mockImplementation(() => {
