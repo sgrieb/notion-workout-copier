@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const { Client } = require('@notionhq/client');
 
 // Initializing a client
@@ -44,11 +42,11 @@ function getBaseDb(childBlocks) {
 async function buildContents(config, dbCreateResult, contentPages) {
   // we have to map the selects to the ones on the new page
   const selectOptions = dbCreateResult.properties.Difficulty.select.options;
-  const options = {}
-  if(config.selectColumns) {
+  const options = {};
+  if (config.selectColumns) {
     config.selectColumns.forEach((column) => {
       options[column] = dbCreateResult.properties[column].select.options;
-    })
+    });
   }
 
   let row = 1;
@@ -61,31 +59,31 @@ async function buildContents(config, dbCreateResult, contentPages) {
       },
     });
 
-    if(config.selectColumns) {
+    if (config.selectColumns) {
       config.selectColumns.forEach((column) => {
         if (page.properties[column].select) {
           createPayload.properties[column].select = selectOptions.find(
             (s) => s.name === page.properties[column].select.name,
           );
         }
-      })
+      });
     }
 
     // checkbox handling
-    if(config.uncheckColumns) {
+    if (config.uncheckColumns) {
       config.uncheckColumns.forEach((column) => {
         page.properties[column].checkbox = false;
-      })
+      });
     }
 
     console.log(`adding row ${row}`);
     row++;
 
-    await notion.pages.create(createPayload)
+    await notion.pages.create(createPayload);
   }
 }
 
-async function runConfig(config) {
+async function run(config) {
   // fetch the most recently created as a base
   // this will only work up  to 100
   const childBlocks = await notion.blocks.children.list({
@@ -159,19 +157,6 @@ async function runConfig(config) {
   await buildContents(config, dbCreateResult, contentPages);
 }
 
-async function main(event) {
-  if (!event || !event.config) {
-    console.log('Invalid / No config provided.  Exiting.');
-    return;
-  }
-
-  for (const config of event.config) {
-    await runConfig(config);
-  }
-
-  console.log('Done!');
-}
-
-exports.handler = async (event, context) => {
-  await main(event, context);
+module.exports = {
+  run,
 };

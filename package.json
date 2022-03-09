@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "local": "node -e \"console.log(require('./index').handler(require('./event.json')));\"",
+    "local": "node -e \"console.log(require('./src/index').handler(require('./event.json')));\"",
     "package": "node-lambda package --packageDirectory=build",
     "lint": "eslint **/*.js",
-    "lint:fix": "eslint --fix **/*.js"
+    "lint:fix": "eslint --fix ./src/**/*.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -24,8 +25,11 @@
     "dotenv": "^10.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^27.4.1",
     "eslint": "^8.8.0",
     "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-plugin-import": "^2.25.4"
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-jest": "^26.1.1",
+    "jest": "^27.5.1"
   }
 }

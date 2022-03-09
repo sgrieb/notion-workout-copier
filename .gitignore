@@ -3,3 +3,4 @@ node_modules
 deploy.env
 build
 event.json
+coverage
