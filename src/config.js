@@ -1,89 +1,19 @@
 const { Client } = require('@notionhq/client');
 
+const { getBaseDb, buildName } = require('./util');
+const { build } = require('./contents');
+
 // Initializing a client
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 });
 
-function buildName(config, pageCount) {
-  const today = new Date();
-  let dateString = today.toLocaleDateString('en-US');
-  dateString = dateString.substring(0, dateString.length - 5);
-
-  let { title } = config;
-
-  // apply string replacements
-  title = title.replace('[PAGE_COUNT]', pageCount);
-  title = title.replace('[DATE]', dateString);
-
-  return title;
-}
-
-function getBaseDb(childBlocks) {
-  let base = null;
-
-  // sort based on creation date
-  childBlocks.results.sort((a, b) => new Date(b.created_time) - new Date(a.created_time));
-
-  childBlocks.results.forEach((item) => {
-    if (base) {
-      return;
-    }
-
-    if (item.type === 'child_database') {
-      base = item;
-    }
-  });
-
-  // get the most recently created db
-  return base;
-}
-
-async function buildContents(config, dbCreateResult, contentPages) {
-  // we have to map the selects to the ones on the new page
-  const selectOptions = dbCreateResult.properties.Difficulty.select.options;
-  const options = {};
-  if (config.selectColumns) {
-    config.selectColumns.forEach((column) => {
-      options[column] = dbCreateResult.properties[column].select.options;
-    });
-  }
-
-  let row = 1;
-
-  // add the contents
-  for (const page of contentPages) {
-    const createPayload = Object.assign(page, {
-      parent: {
-        database_id: dbCreateResult.id,
-      },
-    });
-
-    if (config.selectColumns) {
-      config.selectColumns.forEach((column) => {
-        if (page.properties[column].select) {
-          createPayload.properties[column].select = selectOptions.find(
-            (s) => s.name === page.properties[column].select.name,
-          );
-        }
-      });
-    }
-
-    // checkbox handling
-    if (config.uncheckColumns) {
-      config.uncheckColumns.forEach((column) => {
-        page.properties[column].checkbox = false;
-      });
-    }
-
-    console.log(`adding row ${row}`);
-    row++;
-
-    await notion.pages.create(createPayload);
-  }
-}
-
 async function run(config) {
+  if (!config.parent) {
+    console.log('parent value must be provided');
+    return;
+  }
+
   // fetch the most recently created as a base
   // this will only work up  to 100
   const childBlocks = await notion.blocks.children.list({
@@ -154,7 +84,7 @@ async function run(config) {
     properties: dbSchema.properties,
   });
 
-  await buildContents(config, dbCreateResult, contentPages);
+  await build(notion, config, dbCreateResult, contentPages);
 }
 
 module.exports = {
