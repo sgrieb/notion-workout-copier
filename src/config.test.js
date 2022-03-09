@@ -1,4 +1,12 @@
 const notion = require('@notionhq/client');
+
+const util = require('./util');
+
+jest.mock('./util', () => ({
+  buildName: jest.fn(),
+  getBaseDb: jest.fn(),
+}));
+
 const config = require('./config');
 
 describe('run config', () => {
@@ -12,12 +20,23 @@ describe('run config', () => {
 
   describe('with a valid config', () => {
     it('performs a copy', async () => {
-      notion.blocks.children.list.mockReturnValue([]);
+      const childBlocks = { results: [] };
+      const dbSchema = {};
+      const contentResults = { results: [] };
+      const dbCreateResult = { properties: {} };
+
+      notion.blocks.children.list.mockReturnValue(childBlocks);
+      notion.databases.retrieve.mockReturnValue(dbSchema);
+      notion.databases.query.mockReturnValue(contentResults);
+      notion.databases.create.mockReturnValue(dbCreateResult);
+
+      util.getBaseDb.mockReturnValue({ id: 'base-id' });
 
       await config.run({
-        parent: '1234',
+        parent: 'parent-id',
       });
-      expect(notion.blocks.children.list).toHaveBeenCalledWith({});
+
+      expect(notion.blocks.children.list).toHaveBeenCalledWith({ block_id: 'parent-id' });
     });
   });
 });

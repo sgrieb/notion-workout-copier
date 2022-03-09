@@ -1,6 +1,4 @@
 async function build(notion, config, dbCreateResult, contentPages) {
-  // we have to map the selects to the ones on the new page
-  const selectOptions = dbCreateResult.properties.Difficulty.select.options;
   const options = {};
   if (config.selectColumns) {
     config.selectColumns.forEach((column) => {
@@ -20,6 +18,9 @@ async function build(notion, config, dbCreateResult, contentPages) {
 
     if (config.selectColumns) {
       config.selectColumns.forEach((column) => {
+        // we have to map the selects to the ones on the new page
+        const selectOptions = page.properties[column].select.options;
+
         if (page.properties[column].select) {
           createPayload.properties[column].select = selectOptions.find(
             (s) => s.name === page.properties[column].select.name,
