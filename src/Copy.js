@@ -5,35 +5,54 @@ class Copy {
   constructor(config, logger) {
     this.config = config;
     this.notion = new Notion();
-    this.logger = logger
+    this.logger = logger;
   }
 
-  async execute() {
-    // db === table in notion-land
-    // page === ...everything else
-
-    // get some stuff
-    const mostRecent = await this.notion.getMostRecentChild(this.config.parent);
-    const mostRecentContents = await this.notion.getDbContents(
-      mostRecent.id,
-      this.config,
+  async createArchive() {
+    // get current doc contents
+    const currentDocContents = await this.notion.getDbContents(
+      this.config.documentId,
+      this.config.sortBy,
     );
 
-    // build page name
+    // build archive page name
     const childCount = await this.notion.getChildCount(this.config.parent);
     const dbName = buildName(this.config, childCount);
 
     // create the db
-    const newDbSchema = await this.notion.getDbSchema(mostRecent.id);
-    const newDb = await this.notion.createDb(this.config.parent, newDbSchema.properties, dbName);
+    const oldDbSchema = await this.notion.getDbSchema(this.config.documentId);
+    const newDb = await this.notion.createDb(
+      this.config.parent,
+      oldDbSchema.properties,
+      dbName,
+    );
 
     // create the page
-    await this.buildContents(mostRecentContents, newDb);
+    await this.buildContents(currentDocContents, newDb);
+  }
+
+  async updateCurrent() {
+    let currentDocContents = await this.notion.getDbContents(
+      this.config.documentId,
+      this.config.sortBy,
+    );
+
+    currentDocContents = this.sortByColumn(
+      currentDocContents,
+      this.config.sortBy,
+    );
+
+    // update each row
+    for (const page of currentDocContents) {
+      this.uncheckColumns(page);
+      this.logger.log('Updating row');
+      await this.notion.updatePage(page.id, page);
+    }
   }
 
   async buildContents(rows, newDb) {
     // handle select-style columns
-    const selectOptions = this.getSelectOptions(newDb)
+    const selectOptions = this.getSelectOptions(newDb);
 
     let rowIndex = 1;
     // build the rows
@@ -45,12 +64,7 @@ class Copy {
       });
 
       if (this.config.selectColumns) {
-        this.applySelectOptions(oldRow, newRow, selectOptions)
-      }
-
-      // checkbox handling
-      if (this.config.uncheckColumns) {
-        this.uncheckColumns(newRow)
+        this.applySelectOptions(oldRow, newRow, selectOptions);
       }
 
       this.logger.log(`adding row ${rowIndex}`);
@@ -58,6 +72,10 @@ class Copy {
 
       await this.notion.createPage(newRow);
     }
+  }
+
+  sortByColumn(pages, column) {
+    return pages.sort((a, b) => b.properties[column].number - a.properties[column].number);
   }
 
   getSelectOptions(newDb) {
@@ -68,13 +86,13 @@ class Copy {
       });
     }
 
-    return options
+    return options;
   }
 
   applySelectOptions(oldRow, newRow, selectOptions) {
     this.config.selectColumns.forEach((column) => {
       // we have to map the selects to the ones on the new row
-      const columnOptions = selectOptions[column]
+      const columnOptions = selectOptions[column];
 
       if (oldRow.properties[column].select) {
         newRow.properties[column].select = columnOptions.find(

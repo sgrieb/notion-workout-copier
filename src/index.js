@@ -18,7 +18,8 @@ async function main(event) {
 
       // execute our copy
       const copy = new Copy(config, logger);
-      await copy.execute();
+      await copy.createArchive();
+      await copy.updateCurrent();
     }
 
     logger.log('Copy Complete!');

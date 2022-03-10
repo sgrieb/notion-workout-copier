@@ -7,6 +7,14 @@ class Notion {
     });
   }
 
+  async getPage(pageId) {
+    return this.client.pages.retrieve({ page_id: pageId });
+  }
+
+  async getBlock(blockId) {
+    return this.client.blocks.retrieve({ block_id: blockId });
+  }
+
   async getChildCount(parentId) {
     const childBlocks = await this.client.blocks.children.list({
       block_id: parentId,
@@ -41,7 +49,7 @@ class Notion {
     return base;
   }
 
-  async getDbContents(dbId, config) {
+  async getDbContents(dbId, sortBy) {
     const contentPages = [];
     let cursor;
 
@@ -52,10 +60,10 @@ class Notion {
       };
 
       // apply sort if necessary
-      if (config.sortBy) {
+      if (sortBy) {
         query.sorts = [
           {
-            property: config.sortBy,
+            property: sortBy,
             direction: 'descending',
           },
         ];
@@ -106,6 +114,13 @@ class Notion {
     } catch (e) {
       return e;
     }
+  }
+
+  async updatePage(pageId, page) {
+    return this.client.pages.update({
+      page_id: pageId,
+      ...page,
+    });
   }
 }
 
