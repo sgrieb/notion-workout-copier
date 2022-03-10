@@ -5,13 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "pwa-node",
-            "request": "launch",
             "name": "Launch Program",
+            "program": "${workspaceFolder}/local.js",
+            "request": "launch",
+            "runtimeVersion": "16.4",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/local.js"
+            "type": "pwa-node"
         }
     ]
 }

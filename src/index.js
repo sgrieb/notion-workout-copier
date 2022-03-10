@@ -1,18 +1,30 @@
 require('dotenv').config();
 
-const { run } = require('./config');
+const CopyEvent = require('./CopyEvent');
+const CopyConfig = require('./CopyConfig');
+const Logger = require('./Logger');
+const Copy = require('./Copy');
 
 async function main(event) {
-  if (!event || !event.config) {
-    console.log('Invalid / No config provided.  Exiting.');
-    return;
-  }
+  const logger = new Logger(console);
 
-  for (const config of event.config) {
-    await run(config);
-  }
+  try {
+    // validate the incoming event (an array of configs)
+    CopyEvent.validate(event);
 
-  console.log('Done!');
+    for (const config of event.config) {
+      // validate the config
+      CopyConfig.validate(config);
+
+      // execute our copy
+      const copy = new Copy(config, logger);
+      await copy.execute();
+    }
+
+    logger.log('Copy Complete!');
+  } catch (e) {
+    logger.error(`Caught Error: ${JSON.stringify(e)}`);
+  }
 }
 
 exports.handler = async (event, context) => {
