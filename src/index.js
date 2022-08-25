@@ -28,6 +28,6 @@ async function main(event) {
   }
 }
 
-exports.handler = async (event, context) => {
-  await main(event, context);
-};
+module.exports = {
+  main
+}
