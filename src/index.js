@@ -18,7 +18,7 @@ async function main(event) {
 
       // execute our copy
       const copy = new Copy(config, logger);
-      await copy.createArchive();
+      // await copy.createArchive();
       await copy.updateCurrent();
     }
 

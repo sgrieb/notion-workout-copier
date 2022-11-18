@@ -1,1 +1,1 @@
-require('./src/index').handler(require('./event.json'));
+require('./src/index').main(require('./event.json'));
